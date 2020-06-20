@@ -23,40 +23,18 @@ public class FollowPlayer : MonoBehaviour
     public Transform collisionsSphere;
     private Vector3 _collisionsSpherePos;
 
-    private LineRenderer Trail;
-
     // Start is called before the first frame update
     void Start()
     {
-        Trail = GetComponent<LineRenderer>();
         _collisionsSpherePos = collisionsSphere.localPosition;
         rb = GetComponent<Rigidbody>();
         AiPos = new List<FollowerPosRot>();
         Hurtbox.enabled = false;
-        Trail.positionCount = 2;
         
     }
 
     private void FixedUpdate()
-    {
-        if (_leader != null)
-        {
-            Trail.SetPosition(0, _leader.transform.position);
-        }
-        else
-        {
-            Trail.SetPosition(0, transform.position);
-        }
-        if (_follower != null)
-        {
-            Trail.SetPosition(1, Follower.transform.position);
-        }
-        else
-        {
-            Trail.SetPosition(1, transform.position);
-        }
-        
-
+    {      
         if (CollectDelay < CollectDelayMax)
         {
             CollectDelay += (1 * Time.fixedDeltaTime);
@@ -77,6 +55,8 @@ public class FollowPlayer : MonoBehaviour
     void SpiritHit()
     {
         _PlayerReference.GetComponent<PlayerScript>().Followers.Remove(this.gameObject);
+
+        _PlayerReference.GetComponent<PlayerScript>().Trail.positionCount = _PlayerReference.GetComponent<PlayerScript>().Followers.Count + 1;
         CollectDelay = 0;
         Debug.Log("Hit");
         GetComponent<Rigidbody>().useGravity = true;
@@ -110,7 +90,6 @@ public class FollowPlayer : MonoBehaviour
     public void FollowFinalDestination()
     {
         transform.position = Vector3.MoveTowards(transform.position, _leader.transform.position, WalkSpeed);
-            //Vector3.Lerp(transform.position, _leader.transform.position, WalkSpeed);
 
         transform.rotation = Quaternion.Lerp(transform.rotation, _leader.transform.rotation, WalkSpeed);
         AiPos.RemoveAt(0);
@@ -143,6 +122,7 @@ public class FollowPlayer : MonoBehaviour
         if (other.gameObject.tag == "SpiritGoal")
         {
             _PlayerReference.GetComponent<PlayerScript>().Followers.Remove(this.gameObject);
+            _PlayerReference.GetComponent<PlayerScript>().Trail.positionCount = _PlayerReference.GetComponent<PlayerScript>().Followers.Count + 1;
             Destroy(this.gameObject);
         }
     }

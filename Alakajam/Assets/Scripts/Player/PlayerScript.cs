@@ -18,7 +18,7 @@ public class PlayerScript : MonoBehaviour
 
     public float JumpForce = 5;
 
-    private LineRenderer Trail;
+    private LineRenderer _trail;
 
     [Header("Slope Variables")]
     //Slope Detection
@@ -40,7 +40,7 @@ public class PlayerScript : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        Trail = GetComponent<LineRenderer>();
+        _trail = GetComponent<LineRenderer>();
         Followers = new List<GameObject>();
         rb = GetComponent<Rigidbody>();
 
@@ -65,6 +65,15 @@ public class PlayerScript : MonoBehaviour
         {
 
         }
+        if (Followers.Count > 0)
+        {
+            _trail.SetPosition(Followers.Count  , transform.position);
+            _trail.SetPosition(Followers.Count - 1, Followers[Followers.Count-1].transform.position);
+        }
+        for (int i = 0; i<Followers.Count;i++)
+        {
+            _trail.SetPosition(i, Followers[i].GetComponent<FollowPlayer>().collisionsSphere.transform.position);
+        }
     }
 
     // Update is called once per frame
@@ -76,13 +85,6 @@ public class PlayerScript : MonoBehaviour
             _canJump = true;
         }
         ObeyGravity();
-
-        if (Followers.Count > 0)
-        {
-            Trail.positionCount = 2;
-            Trail.SetPosition(0, transform.position);
-            Trail.SetPosition(1, Followers[Followers.Count - 1].transform.position);
-        }
     }
 
     #region Movement
@@ -268,24 +270,37 @@ public class PlayerScript : MonoBehaviour
                 other.gameObject.GetComponent<Rigidbody>().isKinematic = false;
                 other.gameObject.GetComponent<Rigidbody>().useGravity = false;
 
+                _trail.positionCount = Followers.Count+1;
 
+                if (Followers.Count == 1)
+                {
+                    _trail.SetPosition(0, transform.position);
+                    _trail.SetPosition(1, Followers[Followers.Count - 1].GetComponent<FollowPlayer>().collisionsSphere.transform.position);
+                }
 
-                
-                
-                
+                _trail.SetPosition(Followers.Count, Followers[Followers.Count-1].GetComponent<FollowPlayer>().collisionsSphere.transform.position);
             }
         }
 
         if (other.gameObject.tag == "Exit")
         {
+            
+            //other.GetComponent<LineRenderer>();
             foreach (GameObject a in Followers)
             {
                 a.GetComponent<FollowPlayer>().Leader = other.GetComponent<GoalDoor>().SpiritLeader;
                 a.GetComponent<FollowPlayer>().WalkSpeed = .05f;
+                
             }
         }
     }
     #endregion
+
+    public LineRenderer Trail
+    {
+        set { _trail = value; }
+        get { return _trail; }
+    }
 
     public enum action { normal, jump}
 }
