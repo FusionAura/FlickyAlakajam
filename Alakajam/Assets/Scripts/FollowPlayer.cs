@@ -5,7 +5,8 @@ using UnityEngine;
 public class FollowPlayer : MonoBehaviour
 {
     public float WalkSpeed = 0.1f;
-    private GameObject _leader;
+    [SerializeField] private GameObject _leader;
+    [SerializeField] private GameObject _follower;
     public float MaxDist;
     private Rigidbody rb;
     private bool _following = false;
@@ -17,10 +18,14 @@ public class FollowPlayer : MonoBehaviour
     public float CollectDelay;
 
     public SphereCollider Hurtbox, DetectBox;
+    public Transform collisionsSphere;
+    private Vector3 _collisionsSpherePos;
+
 
     // Start is called before the first frame update
     void Start()
     {
+        _collisionsSpherePos = collisionsSphere.localPosition;
         rb = GetComponent<Rigidbody>();
         AiPos = new List<FollowerPosRot>();
         Hurtbox.enabled = false;
@@ -40,12 +45,36 @@ public class FollowPlayer : MonoBehaviour
             FollowPlayerMovement();
         }
     }
+    //Credit to Alanisaac 
+    private Vector3 RandomVector(float min, float max)
+    {
+        var x = Random.Range(min, max);
+        var y = 5;
+        var z = Random.Range(min, max);
+        return new Vector3(x, y, z);
+    }
 
     void SpiritHit()
     {
-        GetComponent<RotateItem>().enabled = true;
-        Hurtbox.enabled = false;
-        DetectBox.enabled = false;
+        CollectDelay = 0;
+        Debug.Log("Hit");
+        GetComponent<Rigidbody>().useGravity = true;
+        GetComponent<Rigidbody>().isKinematic = false;
+        Hurtbox.isTrigger = false;
+
+        GetComponent<RotateItem>().enabled = false;
+        Hurtbox.enabled = true;
+        DetectBox.enabled = true;
+
+        rb.velocity = RandomVector(0f, 5f);
+
+        _leader = null;
+        _following = false;
+        if (_follower != null)
+        {
+            _follower.GetComponent<FollowPlayer>().SpiritHit();
+            _follower = null;
+        }
     }
 
     public void GetPlayerMovement()
@@ -56,6 +85,7 @@ public class FollowPlayer : MonoBehaviour
         }
         AiPos.Insert(0, new FollowerPosRot(_leader.transform.position, _leader.transform.rotation));
     }
+
     public void FollowPlayerMovement()
     {
         if (AiPos.Count > 0)
@@ -71,6 +101,16 @@ public class FollowPlayer : MonoBehaviour
             _following = false;
         }
     }
+
+    void OnTriggerStay(Collider other)
+    {
+        if (other.gameObject.tag == "Hazard")
+        {
+            Debug.Log("Collision");
+            SpiritHit();
+        }
+    }
+
     public bool Following
     {
         set { _following = value; }
@@ -82,4 +122,15 @@ public class FollowPlayer : MonoBehaviour
         set { _leader = value; }
         get { return _leader; }
     }
+    public GameObject Follower
+    {
+        set { _follower = value; }
+        get { return _follower; }
+    }
+    public Vector3 CollisionsSpherePos
+    {
+        set { _collisionsSpherePos = value; }
+        get { return _collisionsSpherePos; }
+    }
+    
 }
