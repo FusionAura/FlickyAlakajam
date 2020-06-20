@@ -57,7 +57,6 @@ public class PlayerScript : MonoBehaviour
             ground = false;
             _canJump = false;
             Jump(JumpForce);
-
         }
     }
 
@@ -254,6 +253,18 @@ public class PlayerScript : MonoBehaviour
 
                 other.gameObject.GetComponent<Rigidbody>().isKinematic = false;
                 other.gameObject.GetComponent<Rigidbody>().useGravity = false;
+
+
+            }
+        }
+
+        if (other.gameObject.tag == "Exit")
+        {
+            foreach (GameObject a in Followers)
+            {
+                a.GetComponent<FollowPlayer>().Leader = other.GetComponent<GoalDoor>().SpiritLeader;
+                a.GetComponent<FollowPlayer>().WalkSpeed = .05f;
+
 
 
             }

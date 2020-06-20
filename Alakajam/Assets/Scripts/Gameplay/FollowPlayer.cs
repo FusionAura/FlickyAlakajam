@@ -6,10 +6,12 @@ public class FollowPlayer : MonoBehaviour
 {
     public float WalkSpeed = 0.1f;
     [SerializeField] private GameObject _leader;
+    [SerializeField] private GameObject _PlayerReference;
     [SerializeField] private GameObject _follower;
     public float MaxDist;
     private Rigidbody rb;
     private bool _following = false;
+    private bool _safe = false;
 
     public float ListLength = 5;
     private List<FollowerPosRot> AiPos;
@@ -39,23 +41,20 @@ public class FollowPlayer : MonoBehaviour
         }
         CollectDelay = Mathf.Clamp(CollectDelay, 0, CollectDelayMax);
 
-        if (_following)
+        if (_following && _safe == false)
         {
             GetPlayerMovement();
             FollowPlayerMovement();
         }
-    }
-    //Credit to Alanisaac 
-    private Vector3 RandomVector(float min, float max)
-    {
-        var x = Random.Range(min, max);
-        var y = 5;
-        var z = Random.Range(min, max);
-        return new Vector3(x, y, z);
+        else if (_safe)
+        {
+            FollowFinalDestination();
+        }
     }
 
     void SpiritHit()
     {
+        _PlayerReference.GetComponent<PlayerScript>().Followers.Remove(this.gameObject);
         CollectDelay = 0;
         Debug.Log("Hit");
         GetComponent<Rigidbody>().useGravity = true;
@@ -86,6 +85,16 @@ public class FollowPlayer : MonoBehaviour
         AiPos.Insert(0, new FollowerPosRot(_leader.transform.position, _leader.transform.rotation));
     }
 
+    public void FollowFinalDestination()
+    {
+        transform.position = Vector3.MoveTowards(transform.position, _leader.transform.position, WalkSpeed);
+            //Vector3.Lerp(transform.position, _leader.transform.position, WalkSpeed);
+
+        transform.rotation = Quaternion.Lerp(transform.rotation, _leader.transform.rotation, WalkSpeed);
+        AiPos.RemoveAt(0);
+
+    }
+
     public void FollowPlayerMovement()
     {
         if (AiPos.Count > 0)
@@ -102,13 +111,32 @@ public class FollowPlayer : MonoBehaviour
         }
     }
 
-    void OnTriggerStay(Collider other)
+    void OnTriggerEnter(Collider other)
     {
         if (other.gameObject.tag == "Hazard")
         {
             Debug.Log("Collision");
             SpiritHit();
         }
+        if (other.gameObject.tag == "SpiritGoal")
+        {
+            Destroy(this.gameObject);
+        }
+    }
+
+    //Credit to Alanisaac 
+    private Vector3 RandomVector(float min, float max)
+    {
+        var x = Random.Range(min, max);
+        var y = 5;
+        var z = Random.Range(min, max);
+        return new Vector3(x, y, z);
+    }
+
+    public bool Safe
+    {
+        set { _safe = value; }
+        get { return _safe; }
     }
 
     public bool Following
