@@ -23,18 +23,40 @@ public class FollowPlayer : MonoBehaviour
     public Transform collisionsSphere;
     private Vector3 _collisionsSpherePos;
 
+    private LineRenderer Trail;
 
     // Start is called before the first frame update
     void Start()
     {
+        Trail = GetComponent<LineRenderer>();
         _collisionsSpherePos = collisionsSphere.localPosition;
         rb = GetComponent<Rigidbody>();
         AiPos = new List<FollowerPosRot>();
         Hurtbox.enabled = false;
+        Trail.positionCount = 2;
+        
     }
 
     private void FixedUpdate()
     {
+        if (_leader != null)
+        {
+            Trail.SetPosition(0, _leader.transform.position);
+        }
+        else
+        {
+            Trail.SetPosition(0, transform.position);
+        }
+        if (_follower != null)
+        {
+            Trail.SetPosition(1, Follower.transform.position);
+        }
+        else
+        {
+            Trail.SetPosition(1, transform.position);
+        }
+        
+
         if (CollectDelay < CollectDelayMax)
         {
             CollectDelay += (1 * Time.fixedDeltaTime);
@@ -94,7 +116,7 @@ public class FollowPlayer : MonoBehaviour
         AiPos.RemoveAt(0);
 
     }
-
+    
     public void FollowPlayerMovement()
     {
         if (AiPos.Count > 0)
@@ -120,6 +142,7 @@ public class FollowPlayer : MonoBehaviour
         }
         if (other.gameObject.tag == "SpiritGoal")
         {
+            _PlayerReference.GetComponent<PlayerScript>().Followers.Remove(this.gameObject);
             Destroy(this.gameObject);
         }
     }

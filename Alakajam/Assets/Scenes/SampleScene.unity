@@ -3031,6 +3031,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 121189348, guid: edd058fda50b8fb4eaaf0602f2c217a6, type: 3}
+      propertyPath: m_Parameters.widthCurve.m_Curve.Array.data[0].value
+      value: 0.171875
+      objectReference: {fileID: 0}
+    - target: {fileID: 121189348, guid: edd058fda50b8fb4eaaf0602f2c217a6, type: 3}
+      propertyPath: m_Parameters.widthCurve.m_Curve.Array.data[0].time
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: edd058fda50b8fb4eaaf0602f2c217a6, type: 3}
 --- !u!1001 &7859815838611057534
@@ -3105,5 +3113,15 @@ PrefabInstance:
       propertyPath: _PlayerReference
       value: 
       objectReference: {fileID: 121189340}
+    - target: {fileID: 1904416503389722001, guid: b79682855123dd54a97705d6c808c67d,
+        type: 3}
+      propertyPath: m_Parameters.widthCurve.m_Curve.Array.data[0].value
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1904416503389722001, guid: b79682855123dd54a97705d6c808c67d,
+        type: 3}
+      propertyPath: m_Parameters.widthCurve.m_Curve.Array.data[0].time
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b79682855123dd54a97705d6c808c67d, type: 3}

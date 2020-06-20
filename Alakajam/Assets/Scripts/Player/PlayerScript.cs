@@ -18,6 +18,8 @@ public class PlayerScript : MonoBehaviour
 
     public float JumpForce = 5;
 
+    private LineRenderer Trail;
+
     [Header("Slope Variables")]
     //Slope Detection
     [SerializeField] float _slopeForce;
@@ -38,6 +40,7 @@ public class PlayerScript : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        Trail = GetComponent<LineRenderer>();
         Followers = new List<GameObject>();
         rb = GetComponent<Rigidbody>();
 
@@ -58,6 +61,10 @@ public class PlayerScript : MonoBehaviour
             _canJump = false;
             Jump(JumpForce);
         }
+        if (Input.GetButton("Fire1"))
+        {
+
+        }
     }
 
     // Update is called once per frame
@@ -69,6 +76,13 @@ public class PlayerScript : MonoBehaviour
             _canJump = true;
         }
         ObeyGravity();
+
+        if (Followers.Count > 0)
+        {
+            Trail.positionCount = 2;
+            Trail.SetPosition(0, transform.position);
+            Trail.SetPosition(1, Followers[Followers.Count - 1].transform.position);
+        }
     }
 
     #region Movement
@@ -255,6 +269,10 @@ public class PlayerScript : MonoBehaviour
                 other.gameObject.GetComponent<Rigidbody>().useGravity = false;
 
 
+
+                
+                
+                
             }
         }
 
@@ -264,9 +282,6 @@ public class PlayerScript : MonoBehaviour
             {
                 a.GetComponent<FollowPlayer>().Leader = other.GetComponent<GoalDoor>().SpiritLeader;
                 a.GetComponent<FollowPlayer>().WalkSpeed = .05f;
-
-
-
             }
         }
     }
