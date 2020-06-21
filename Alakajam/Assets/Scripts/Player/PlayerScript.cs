@@ -26,6 +26,7 @@ public class PlayerScript : MonoBehaviour
     [SerializeField] float _slopeForceRayLength;
     [SerializeField] bool ground;
     [SerializeField] bool _canJump = true;
+    bool wishjump = false;
     public float maxGroundedAngle = 75f;
    
     Vector3 currentGravity; // Just holds some data for us...
@@ -34,12 +35,18 @@ public class PlayerScript : MonoBehaviour
 
     [Header("Other Variables")]
     [SerializeField] public List<GameObject> Followers;
-
+    [SerializeField] public List<GameObject> Goodbye;
+    public float calloutRadius = 100;
     public action PlayerState = action.normal;
+    public GameControllerScript GamecontrollerObj;
 
+    [Header("Radar Variables")]
+    public float SearchTimerMax = 5;
+    public float SearchTimer = 5;
     // Start is called before the first frame update
     void Start()
     {
+        GamecontrollerObj = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameControllerScript>();
         _trail = GetComponent<LineRenderer>();
         Followers = new List<GameObject>();
         rb = GetComponent<Rigidbody>();
@@ -48,23 +55,21 @@ public class PlayerScript : MonoBehaviour
         forward.y = 0;
         forward = Vector3.Normalize(forward);
         right = Quaternion.Euler(new Vector3(0,90,0))*forward;
+        
 
+    }
+
+    private void OnDrawGizmos()
+    {
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, calloutRadius);
     }
 
     private void FixedUpdate()
     {
         Move();
-        //Jump
-        if (Input.GetButton("Jump") && ground && _canJump == true && PlayerState == action.normal)
-        {
-            ground = false;
-            _canJump = false;
-            Jump(JumpForce);
-        }
-        if (Input.GetButton("Fire1"))
-        {
+        Radar();
 
-        }
         if (Followers.Count > 0)
         {
             _trail.SetPosition(Followers.Count  , transform.position);
@@ -79,12 +84,14 @@ public class PlayerScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (ground)
+        if (ground && rb.velocity.y <=0)
         {
             PlayerState = action.normal;
             _canJump = true;
         }
         ObeyGravity();
+        Jump(JumpForce);
+
     }
 
     #region Movement
@@ -162,13 +169,56 @@ public class PlayerScript : MonoBehaviour
 
     void Jump(float force)
     {
-        PlayerState = action.jump;
-        Vector3 jumpDir = (transform.up * force);
-
-        rb.AddForce(jumpDir, ForceMode.VelocityChange);
+        //Jump
+        if (Input.GetButtonDown("Jump"))
+        {
+            wishjump = true;
+        }
+        if (wishjump == true && ground && _canJump == true )
+        {
+            wishjump = false;
+            ground = false;
+            rb.AddForce(0,force,0, ForceMode.VelocityChange);
+            _canJump = false;
+            PlayerState = action.jump;
+        }
     }
 
     #endregion
+
+    void Radar()
+    {
+        if (Input.GetButton("Fire1") && SearchTimer >= SearchTimerMax)
+        {
+            SearchTimer = 0;
+        }
+        if (SearchTimer < SearchTimerMax)
+        {
+            SearchTimer += 1 * Time.fixedDeltaTime;
+            Collider[] Callout = Physics.OverlapSphere(transform.position, calloutRadius);
+            foreach (Collider a in Callout)
+            {
+                if (a.gameObject.tag == "Chirp" && a.GetComponent<FollowPlayer>().Following == false)
+                {
+                    LineRenderer Spirit = a.gameObject.GetComponent<LineRenderer>();
+                    Spirit.positionCount = 2;
+                    Spirit.SetPosition(0, a.gameObject.transform.position);
+                    Spirit.SetPosition(1, transform.position);
+                    if (SearchTimer >= SearchTimerMax)
+                    {
+                        Spirit.positionCount = 1;
+                    }
+                }
+                else if(a.gameObject.tag == "Chirp" && a.GetComponent<FollowPlayer>().Following ==  true)
+                {
+                    LineRenderer Spirit = a.gameObject.GetComponent<LineRenderer>();
+                    Spirit.positionCount = 1;
+                }
+            }
+        }
+    }
+
+
     #region Credit to user2712865 / Propoc
     //Credit to user2712865 / Propoc
     //https://gamedev.stackexchange.com/questions/146738/how-to-disable-gravity-for-a-rigidbody-moving-on-a-slope
@@ -240,7 +290,16 @@ public class PlayerScript : MonoBehaviour
     {
         if (other.gameObject.tag == "Chirp")
         {
+
             FollowPlayer followplayer = other.GetComponent<FollowPlayer>();
+            if (followplayer.Known == false)
+            {
+                followplayer.Known = true;
+                GamecontrollerObj.Multiplier += 1;
+                GamecontrollerObj.MultiplierTimer = 0;
+                GamecontrollerObj.IncrementScore(200);
+                GamecontrollerObj.UI.UpdateMultiplier(GamecontrollerObj.Multiplier);
+            }
             if (followplayer.CollectDelay >= followplayer.CollectDelayMax)
             {
                 if (!Followers.Contains(other.gameObject)) Followers.Insert(0, other.gameObject);
@@ -252,9 +311,10 @@ public class PlayerScript : MonoBehaviour
                 else
                 {
                     Followers[0].GetComponent<FollowPlayer>().Leader = Followers[1].gameObject;
-                    Followers[1].GetComponent<FollowPlayer>().Follower = Followers[0].gameObject;
-                    
+                    Followers[1].GetComponent<FollowPlayer>().Follower = Followers[0].gameObject; 
                 }
+
+                //Fuckery that is setting the hitboxes and collisions.
                 followplayer.Following = true;
                 other.gameObject.GetComponent<RotateItem>().enabled = false;
 
@@ -279,19 +339,34 @@ public class PlayerScript : MonoBehaviour
                 }
 
                 _trail.SetPosition(Followers.Count, Followers[Followers.Count-1].GetComponent<FollowPlayer>().collisionsSphere.transform.position);
+
+
             }
         }
 
         if (other.gameObject.tag == "Exit")
         {
-            
+            Goodbye = new List<GameObject>(Followers);
+            Followers.Clear();
+            Trail.positionCount = Followers.Count + 1;
+
             //other.GetComponent<LineRenderer>();
-            foreach (GameObject a in Followers)
+            foreach (GameObject a in Goodbye)
             {
                 a.GetComponent<FollowPlayer>().Leader = other.GetComponent<GoalDoor>().SpiritLeader;
                 a.GetComponent<FollowPlayer>().WalkSpeed = .05f;
-                
             }
+        }
+
+        if (other.gameObject.tag == "Score")
+        {
+            Destroy(other.gameObject);
+            GamecontrollerObj.Multiplier += 1;
+            GamecontrollerObj.MultiplierTimer = 0;
+            GamecontrollerObj.IncrementScore(100);
+            GamecontrollerObj.UI.UpdateMultiplier(GamecontrollerObj.Multiplier);
+
+            
         }
     }
     #endregion

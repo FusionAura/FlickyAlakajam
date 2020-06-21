@@ -9,6 +9,7 @@ TagManager:
   - Exit
   - Hazard
   - SpiritGoal
+  - Score
   layers:
   - Default
   - TransparentFX

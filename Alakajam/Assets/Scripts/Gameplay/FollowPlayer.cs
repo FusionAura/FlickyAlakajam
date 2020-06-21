@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class FollowPlayer : MonoBehaviour
 {
+    public bool Known = false;
     public float WalkSpeed = 0.1f;
     [SerializeField] private GameObject _leader;
     [SerializeField] private GameObject _PlayerReference;
@@ -22,6 +23,7 @@ public class FollowPlayer : MonoBehaviour
     public SphereCollider Hurtbox, DetectBox;
     public Transform collisionsSphere;
     private Vector3 _collisionsSpherePos;
+    private Vector3 RadarPos, MyPos;
 
     // Start is called before the first frame update
     void Start()
@@ -119,6 +121,11 @@ public class FollowPlayer : MonoBehaviour
             Debug.Log("Collision");
             SpiritHit();
         }
+        if (other.gameObject.tag == "Exit")
+        {
+            _leader = other.GetComponent<GoalDoor>().SpiritLeader;
+        }
+
         if (other.gameObject.tag == "SpiritGoal")
         {
             _PlayerReference.GetComponent<PlayerScript>().Followers.Remove(this.gameObject);
