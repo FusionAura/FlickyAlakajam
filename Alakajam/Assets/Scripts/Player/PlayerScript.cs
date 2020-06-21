@@ -70,7 +70,7 @@ public class PlayerScript : MonoBehaviour
         Move();
         Radar();
 
-        if (Followers.Count > 0)
+        if (Followers.Count > 0 && Followers[Followers.Count - 1] != null)
         {
             _trail.SetPosition(Followers.Count  , transform.position);
             _trail.SetPosition(Followers.Count - 1, Followers[Followers.Count-1].transform.position);
@@ -290,63 +290,65 @@ public class PlayerScript : MonoBehaviour
     {
         if (other.gameObject.tag == "Chirp")
         {
-
             FollowPlayer followplayer = other.GetComponent<FollowPlayer>();
-            if (followplayer.Known == false)
-            {
-                followplayer.Known = true;
-                GamecontrollerObj.Multiplier += 1;
-                GamecontrollerObj.MultiplierTimer = 0;
-                GamecontrollerObj.IncrementScore(200);
-                GamecontrollerObj.UI.UpdateMultiplier(GamecontrollerObj.Multiplier);
-            }
-            if (followplayer.CollectDelay >= followplayer.CollectDelayMax)
-            {
-                if (!Followers.Contains(other.gameObject)) Followers.Insert(0, other.gameObject);
-
-                if (Followers.Count == 1)
+            if(followplayer.Saved == false)
+            { 
+                if (followplayer.Known == false)
                 {
-                    Followers[0].GetComponent<FollowPlayer>().Leader = gameObject;
+                    followplayer.Known = true;
+                    GamecontrollerObj.Multiplier += 1;
+                    GamecontrollerObj.MultiplierTimer = 0;
+                    GamecontrollerObj.IncrementScore(200);
+                    GamecontrollerObj.UI.UpdateMultiplier(GamecontrollerObj.Multiplier);
                 }
-                else
+                if (followplayer.CollectDelay >= followplayer.CollectDelayMax)
                 {
-                    Followers[0].GetComponent<FollowPlayer>().Leader = Followers[1].gameObject;
-                    Followers[1].GetComponent<FollowPlayer>().Follower = Followers[0].gameObject; 
+                    if (!Followers.Contains(other.gameObject)) Followers.Insert(0, other.gameObject);
+
+                    if (Followers.Count == 1)
+                    {
+                        Followers[0].GetComponent<FollowPlayer>().Leader = gameObject;
+                    }
+                    else
+                    {
+                        Followers[0].GetComponent<FollowPlayer>().Leader = Followers[1].gameObject;
+                        Followers[1].GetComponent<FollowPlayer>().Follower = Followers[0].gameObject;
+                    }
+
+                    //Fuckery that is setting the hitboxes and collisions.
+                    followplayer.Following = true;
+                    other.gameObject.GetComponent<RotateItem>().enabled = false;
+
+                    followplayer.Hurtbox.enabled = true;
+                    followplayer.DetectBox.enabled = false;
+
+                    followplayer.GetComponent<Rigidbody>().velocity = Vector3.zero;
+                    followplayer.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+
+                    followplayer.collisionsSphere.transform.localPosition = other.gameObject.GetComponent<FollowPlayer>().CollisionsSpherePos;
+                    followplayer.Hurtbox.isTrigger = true;
+
+                    other.gameObject.GetComponent<Rigidbody>().isKinematic = false;
+                    other.gameObject.GetComponent<Rigidbody>().useGravity = false;
+
+                    _trail.positionCount = Followers.Count + 1;
+
+                    if (Followers.Count == 1)
+                    {
+                        _trail.SetPosition(0, transform.position);
+                        _trail.SetPosition(1, Followers[Followers.Count - 1].GetComponent<FollowPlayer>().collisionsSphere.transform.position);
+                    }
+
+                    _trail.SetPosition(Followers.Count, Followers[Followers.Count - 1].GetComponent<FollowPlayer>().collisionsSphere.transform.position);
                 }
-
-                //Fuckery that is setting the hitboxes and collisions.
-                followplayer.Following = true;
-                other.gameObject.GetComponent<RotateItem>().enabled = false;
-
-                followplayer.Hurtbox.enabled = true;
-                followplayer.DetectBox.enabled = false;
-
-                followplayer.GetComponent<Rigidbody>().velocity = Vector3.zero;
-                followplayer.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
-
-                followplayer.collisionsSphere.transform.localPosition = other.gameObject.GetComponent<FollowPlayer>().CollisionsSpherePos;
-                followplayer.Hurtbox.isTrigger = true;
-
-                other.gameObject.GetComponent<Rigidbody>().isKinematic = false;
-                other.gameObject.GetComponent<Rigidbody>().useGravity = false;
-
-                _trail.positionCount = Followers.Count+1;
-
-                if (Followers.Count == 1)
-                {
-                    _trail.SetPosition(0, transform.position);
-                    _trail.SetPosition(1, Followers[Followers.Count - 1].GetComponent<FollowPlayer>().collisionsSphere.transform.position);
-                }
-
-                _trail.SetPosition(Followers.Count, Followers[Followers.Count-1].GetComponent<FollowPlayer>().collisionsSphere.transform.position);
-
 
             }
         }
 
         if (other.gameObject.tag == "Exit")
         {
-            Goodbye = new List<GameObject>(Followers);
+            Goodbye.AddRange(Followers);
+
             Followers.Clear();
             Trail.positionCount = Followers.Count + 1;
 
@@ -363,10 +365,8 @@ public class PlayerScript : MonoBehaviour
             Destroy(other.gameObject);
             GamecontrollerObj.Multiplier += 1;
             GamecontrollerObj.MultiplierTimer = 0;
-            GamecontrollerObj.IncrementScore(100);
-            GamecontrollerObj.UI.UpdateMultiplier(GamecontrollerObj.Multiplier);
-
-            
+            GamecontrollerObj.IncrementScore(10);
+            GamecontrollerObj.UI.UpdateMultiplier(GamecontrollerObj.Multiplier); 
         }
     }
     #endregion

@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class FollowPlayer : MonoBehaviour
 {
-    public bool Known = false;
+    public bool Known = false, Saved = false;
     public float WalkSpeed = 0.1f;
     [SerializeField] private GameObject _leader;
     [SerializeField] private GameObject _PlayerReference;
@@ -124,12 +124,20 @@ public class FollowPlayer : MonoBehaviour
         if (other.gameObject.tag == "Exit")
         {
             _leader = other.GetComponent<GoalDoor>().SpiritLeader;
+            if (Saved == false)
+            {
+                Saved = true;
+                other.GetComponent<GoalDoor>().Multiplier += 1;
+            }
         }
 
         if (other.gameObject.tag == "SpiritGoal")
         {
+            _PlayerReference.GetComponent<PlayerScript>().Goodbye.Remove(this.gameObject);
             _PlayerReference.GetComponent<PlayerScript>().Followers.Remove(this.gameObject);
             _PlayerReference.GetComponent<PlayerScript>().Trail.positionCount = _PlayerReference.GetComponent<PlayerScript>().Followers.Count + 1;
+
+            _PlayerReference.GetComponent<PlayerScript>().GamecontrollerObj.IncrementScore(25 * other.GetComponentInParent<GoalDoor>().Multiplier);
             Destroy(this.gameObject);
         }
     }
