@@ -10,6 +10,7 @@ TagManager:
   - Hazard
   - SpiritGoal
   - Score
+  - Clock
   layers:
   - Default
   - TransparentFX

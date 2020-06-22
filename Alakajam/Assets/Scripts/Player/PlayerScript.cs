@@ -39,6 +39,7 @@ public class PlayerScript : MonoBehaviour
     public float calloutRadius = 100;
     public action PlayerState = action.normal;
     public GameControllerScript GamecontrollerObj;
+    public GameObject ExitDoorLocation;
     public int FollowCount;
 
     [Header("Radar Variables")]
@@ -48,6 +49,7 @@ public class PlayerScript : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        ExitDoorLocation = GameObject.FindGameObjectWithTag("Exit");
         GamecontrollerObj = GameObject.FindGameObjectWithTag("GameController").GetComponent<GameControllerScript>();
         _trail = GetComponent<LineRenderer>();
         Followers = new List<GameObject>();
@@ -59,50 +61,60 @@ public class PlayerScript : MonoBehaviour
         right = Quaternion.Euler(new Vector3(0,90,0))*forward;
     }
 
-    private void OnDrawGizmos()
-    {
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, calloutRadius);
-    }
 
     private void FixedUpdate()
     {
-        Move();
-        Radar();
-        Jump(JumpForce);
-        if (Followers.Count > 0 && Followers[0] != null)
+        if (GamecontrollerObj.GameActive)
         {
-            _trail.SetPosition(0, transform.position);
-            if (Followers[0].GetComponent<LineRenderer>().positionCount !=0)
+            Move();
+            Radar();
+            Jump(JumpForce);
+            if (Followers.Count > 0 && Followers[0] != null)
             {
-                _trail.SetPosition(1, Followers[0].transform.position);
+                _trail.SetPosition(0, transform.position);
+                if (Followers[0].GetComponent<LineRenderer>().positionCount != 0)
+                {
+                    _trail.SetPosition(1, Followers[0].transform.position);
+                }
             }
-        }
-        FollowCount = Followers.Count + 1;
-        if (FollowCount > 0)
-        {
-            for (int i = 1; i < FollowCount; i++)
+            FollowCount = Followers.Count + 1;
+            if (FollowCount > 0)
             {
-                _trail.SetPosition(i, Followers[i - 1].GetComponent<FollowPlayer>().collisionsSphere.transform.position);
+                for (int i = 1; i < FollowCount; i++)
+                {
+                    _trail.SetPosition(i, Followers[i - 1].GetComponent<FollowPlayer>().collisionsSphere.transform.position);
+                }
             }
-        }
-        
+        }  
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (ground && rb.velocity.y <=0)
+        if (GamecontrollerObj.GameActive)
         {
-            PlayerState = action.normal;
-           
-        }
-        ObeyGravity();
-        
-        //Jump
-        if (Input.GetButtonDown("Jump"))
-        {
-            wishjump = true;
+            if (Input.GetButtonDown("Fire1") && SearchTimer != 0)
+            {
+                SearchTimer = 0;
+            }
+            if (Input.GetButtonUp("Fire1"))
+            {
+                SearchTimer = SearchTimerMax;
+                ExitDoorLocation.GetComponent<LineRenderer>().positionCount = 0;
+            }
+
+            if (ground && rb.velocity.y <= 0)
+            {
+                PlayerState = action.normal;
+
+            }
+            ObeyGravity();
+
+            //Jump
+            if (Input.GetButtonDown("Jump"))
+            {
+                wishjump = true;
+            }
         }
     }
 
@@ -204,13 +216,13 @@ public class PlayerScript : MonoBehaviour
 
     void Radar()
     {
-        if (Input.GetButton("Fire1") && SearchTimer >= SearchTimerMax)
+        if (SearchTimer != SearchTimerMax)
         {
-            SearchTimer = 0;
-        }
-        if (SearchTimer < SearchTimerMax)
-        {
-            SearchTimer += 1 * Time.fixedDeltaTime;
+            ExitDoorLocation.GetComponent<LineRenderer>().positionCount = 2;
+            ExitDoorLocation.GetComponent<LineRenderer>().SetPosition(0, transform.position);
+            ExitDoorLocation.GetComponent<LineRenderer>().SetPosition(1, ExitDoorLocation.transform.position);
+
+            //SearchTimer += 1 * Time.fixedDeltaTime;
             Collider[] Callout = Physics.OverlapSphere(transform.position, calloutRadius);
             foreach (Collider a in Callout)
             {
@@ -305,10 +317,16 @@ public class PlayerScript : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+
+        if (other.gameObject.tag == "Clock")
+        {
+            GamecontrollerObj.Timer += 15;
+            Destroy(other.gameObject);
+        }
         if (other.gameObject.tag == "Chirp")
         {
             FollowPlayer followplayer = other.GetComponent<FollowPlayer>();
-                        if(followplayer.Saved == false && followplayer.Following == false)
+            if(followplayer.Saved == false && followplayer.Following == false)
             {  
                 if (followplayer.Known == false)
                 {
@@ -319,8 +337,9 @@ public class PlayerScript : MonoBehaviour
                         GamecontrollerObj.Multiplier = GamecontrollerObj.MultiplierMax;
                     }
                     GamecontrollerObj.MultiplierTimer = 0;
-                    GamecontrollerObj.IncrementScore(200);
+                    
                     GamecontrollerObj.UI.UpdateMultiplier(GamecontrollerObj.Multiplier);
+                    GamecontrollerObj.IncrementScore(25);
                 }
                 if (followplayer.CollectDelay >= followplayer.CollectDelayMax)
                 {

@@ -166,13 +166,23 @@ public class FollowPlayer : MonoBehaviour
             GetComponent<Rigidbody>().isKinematic = false;
             GetComponent<Rigidbody>().useGravity = false;
 
-            _PlayerReference.GetComponent<PlayerScript>().Goodbye.Remove(this.gameObject);
-            _PlayerReference.GetComponent<PlayerScript>().Followers.Remove(this.gameObject);
-            _PlayerReference.GetComponent<PlayerScript>().Trail.positionCount = _PlayerReference.GetComponent<PlayerScript>().Followers.Count + 1;
+            PlayerScript PlayerRef = _PlayerReference.GetComponent<PlayerScript>();
+
+            PlayerRef.Goodbye.Remove(this.gameObject);
+            PlayerRef.Followers.Remove(this.gameObject);
+            PlayerRef.Trail.positionCount = _PlayerReference.GetComponent<PlayerScript>().Followers.Count + 1;
             other.GetComponentInParent<GoalDoor>().Multiplier += 1;
-            _PlayerReference.GetComponent<PlayerScript>().GamecontrollerObj.IncrementScore(25 * other.GetComponentInParent<GoalDoor>().Multiplier);
+            PlayerRef.GamecontrollerObj.IncrementScore(25 * other.GetComponentInParent<GoalDoor>().Multiplier);
+
+            PlayerRef.GamecontrollerObj.Timer += 2;
+            
             Destroy(this.gameObject);
         }
+    }
+    private void OnDestroy()
+    {
+        if (_PlayerReference !=null)
+        _PlayerReference.GetComponent<PlayerScript>().GamecontrollerObj.GetComponentInParent<GameControllerScript>().NoSpirits();
     }
 
     //Credit to Alanisaac 

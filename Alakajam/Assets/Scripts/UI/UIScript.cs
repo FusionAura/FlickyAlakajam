@@ -6,6 +6,9 @@ public class UIScript : MonoBehaviour
     public Text ScoreVal;
     public Text TimerVal;
     public Text Multiplier;
+    public GameObject GameOver;
+    public Text FinalScore;
+    public Text Msg;
 
     // Start is called before the first frame update
     private void Start()
@@ -14,10 +17,10 @@ public class UIScript : MonoBehaviour
         TimerVal.text = "Time Remaining:";
     }
 
-    public void UpdateTime(float TimeRemain)
+    public void UpdateTime(float TimeRemain,int MaxTime)
     {
         int Rounded = Mathf.RoundToInt(TimeRemain);
-        TimerVal.text = "Time Remaining:"+Rounded.ToString("F0");
+        TimerVal.text = "Time Remaining:"+Rounded.ToString("F0")+ "/" + MaxTime.ToString();
         
     }
 
