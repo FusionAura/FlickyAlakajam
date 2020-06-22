@@ -12,7 +12,6 @@ public class FollowPlayer : MonoBehaviour
     public float MaxDist;
     private Rigidbody rb;
     private bool _following = false;
-    private bool _safe = false;
 
     public float ListLength = 5;
     private List<FollowerPosRot> AiPos;
@@ -41,61 +40,77 @@ public class FollowPlayer : MonoBehaviour
         {
             CollectDelay += (1 * Time.fixedDeltaTime);
         }
+
         CollectDelay = Mathf.Clamp(CollectDelay, 0, CollectDelayMax);
 
-        if (_following && _safe == false)
+        if (_following && Saved == false)
         {
             GetPlayerMovement();
             FollowPlayerMovement();
         }
-        else if (_safe)
+        if (Saved)
         {
+            if (_leader == null)
+            _leader = GameObject.FindGameObjectWithTag("Exit").GetComponent<GoalDoor>().SpiritLeader;
+           
             FollowFinalDestination();
+        }
+
+        if (_PlayerReference.GetComponent<PlayerScript>().SearchTimer >= _PlayerReference.GetComponent<PlayerScript>().SearchTimerMax || Vector3.Distance(this.transform.position, _PlayerReference.transform.position) > _PlayerReference.GetComponent<PlayerScript>().calloutRadius)
+        {
+            GetComponent<LineRenderer>().positionCount = 0;
         }
     }
 
     void SpiritHit()
     {
-        _PlayerReference.GetComponent<PlayerScript>().Followers.Remove(this.gameObject);
-
-        _PlayerReference.GetComponent<PlayerScript>().Trail.positionCount = _PlayerReference.GetComponent<PlayerScript>().Followers.Count + 1;
-        CollectDelay = 0;
-        Debug.Log("Hit");
-        GetComponent<Rigidbody>().useGravity = true;
-        GetComponent<Rigidbody>().isKinematic = false;
-        Hurtbox.isTrigger = false;
-
-        GetComponent<RotateItem>().enabled = false;
-        Hurtbox.enabled = true;
-        DetectBox.enabled = true;
-
-        rb.velocity = RandomVector(0f, 5f);
-
-        _leader = null;
-        _following = false;
-        if (_follower != null)
+        GetComponent<LineRenderer>().positionCount = 0;
+        if (Saved == false)
         {
-            _follower.GetComponent<FollowPlayer>().SpiritHit();
+            
+            //_PlayerReference.GetComponent<PlayerScript>().Trail.positionCount = 0;
+            
+            _PlayerReference.GetComponent<PlayerScript>().Followers.Remove(this.gameObject);
+
+            _PlayerReference.GetComponent<PlayerScript>().Trail.positionCount = _PlayerReference.GetComponent<PlayerScript>().Followers.Count + 1;
+            CollectDelay = 0;
+            //Debug.Log("Hit");
+            GetComponent<Rigidbody>().useGravity = true;
+            GetComponent<Rigidbody>().isKinematic = false;
+            Hurtbox.isTrigger = false;
+
+            GetComponent<RotateItem>().enabled = false;
+            Hurtbox.enabled = true;
+            DetectBox.enabled = true;
+
+            rb.velocity = RandomVector(1f, 5f);
+            _leader = null;
+            _following = false;
+            if (_follower != null)
+            {
+                _follower.GetComponent<FollowPlayer>().SpiritHit();
+            }
             _follower = null;
         }
     }
 
     public void GetPlayerMovement()
     {
-        if (AiPos.Count > Mathf.Round(ListLength / Time.fixedDeltaTime))
+        if (_leader != null)
         {
-            AiPos.RemoveAt(AiPos.Count - 1);
+            if (AiPos.Count > Mathf.Round(ListLength / Time.fixedDeltaTime))
+            {
+                AiPos.RemoveAt(AiPos.Count - 1);
+            }
+            AiPos.Add(new FollowerPosRot(_leader.transform.position, _leader.transform.rotation));
         }
-        AiPos.Insert(0, new FollowerPosRot(_leader.transform.position, _leader.transform.rotation));
     }
 
     public void FollowFinalDestination()
     {
-        transform.position = Vector3.MoveTowards(transform.position, _leader.transform.position, WalkSpeed);
+        transform.position = Vector3.MoveTowards(transform.position, _leader.transform.position, WalkSpeed*2);
 
         transform.rotation = Quaternion.Lerp(transform.rotation, _leader.transform.rotation, WalkSpeed);
-        AiPos.RemoveAt(0);
-
     }
     
     public void FollowPlayerMovement()
@@ -105,38 +120,56 @@ public class FollowPlayer : MonoBehaviour
             FollowerPosRot PointInTime = AiPos[0];
             transform.position = Vector3.Lerp(transform.position, PointInTime.position, WalkSpeed);
 
-            transform.rotation = Quaternion.Lerp(transform.rotation,PointInTime.rotation, WalkSpeed);
+            transform.rotation = Quaternion.Lerp(transform.rotation, PointInTime.rotation, WalkSpeed);
             AiPos.RemoveAt(0);
         }
         else
         {
             _following = false;
         }
+
     }
 
     void OnTriggerEnter(Collider other)
     {
         if (other.gameObject.tag == "Hazard")
         {
-            Debug.Log("Collision");
             SpiritHit();
         }
         if (other.gameObject.tag == "Exit")
         {
+            GetComponent<Rigidbody>().useGravity = false;
+            GetComponent<Rigidbody>().isKinematic = true;
             _leader = other.GetComponent<GoalDoor>().SpiritLeader;
             if (Saved == false)
             {
                 Saved = true;
-                other.GetComponent<GoalDoor>().Multiplier += 1;
+                
             }
         }
 
         if (other.gameObject.tag == "SpiritGoal")
         {
+            //Fuckery that is setting the hitboxes and collisions.
+            
+            GetComponent<RotateItem>().enabled = false;
+
+            Hurtbox.enabled = true;
+            DetectBox.enabled = false;
+
+            GetComponent<Rigidbody>().velocity = Vector3.zero;
+            GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+
+            collisionsSphere.transform.localPosition = CollisionsSpherePos;
+            Hurtbox.isTrigger = true;
+
+            GetComponent<Rigidbody>().isKinematic = false;
+            GetComponent<Rigidbody>().useGravity = false;
+
             _PlayerReference.GetComponent<PlayerScript>().Goodbye.Remove(this.gameObject);
             _PlayerReference.GetComponent<PlayerScript>().Followers.Remove(this.gameObject);
             _PlayerReference.GetComponent<PlayerScript>().Trail.positionCount = _PlayerReference.GetComponent<PlayerScript>().Followers.Count + 1;
-
+            other.GetComponentInParent<GoalDoor>().Multiplier += 1;
             _PlayerReference.GetComponent<PlayerScript>().GamecontrollerObj.IncrementScore(25 * other.GetComponentInParent<GoalDoor>().Multiplier);
             Destroy(this.gameObject);
         }
@@ -148,13 +181,8 @@ public class FollowPlayer : MonoBehaviour
         var x = Random.Range(min, max);
         var y = 5;
         var z = Random.Range(min, max);
-        return new Vector3(x, y, z);
-    }
 
-    public bool Safe
-    {
-        set { _safe = value; }
-        get { return _safe; }
+        return new Vector3(x, y, z);
     }
 
     public bool Following

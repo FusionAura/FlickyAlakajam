@@ -14,7 +14,7 @@ public class PlayerScript : MonoBehaviour
 
     [SerializeField] float moveHorizontal = 0, moveVertical = 0, moveHorizontalRaw = 0, moveVerticalRaw = 0, SavedUp = 0, SavedRight = 0;
 
-    Vector3 forward, right, rightMovement, upMovement, heading, surfaceValue = Vector3.zero;
+     Vector3 forward, right, rightMovement, upMovement, heading, surfaceValue = Vector3.zero;
 
     public float JumpForce = 5;
 
@@ -39,10 +39,12 @@ public class PlayerScript : MonoBehaviour
     public float calloutRadius = 100;
     public action PlayerState = action.normal;
     public GameControllerScript GamecontrollerObj;
+    public int FollowCount;
 
     [Header("Radar Variables")]
     public float SearchTimerMax = 5;
     public float SearchTimer = 5;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -55,8 +57,6 @@ public class PlayerScript : MonoBehaviour
         forward.y = 0;
         forward = Vector3.Normalize(forward);
         right = Quaternion.Euler(new Vector3(0,90,0))*forward;
-        
-
     }
 
     private void OnDrawGizmos()
@@ -69,16 +69,24 @@ public class PlayerScript : MonoBehaviour
     {
         Move();
         Radar();
-
-        if (Followers.Count > 0 && Followers[Followers.Count - 1] != null)
+        Jump(JumpForce);
+        if (Followers.Count > 0 && Followers[0] != null)
         {
-            _trail.SetPosition(Followers.Count  , transform.position);
-            _trail.SetPosition(Followers.Count - 1, Followers[Followers.Count-1].transform.position);
+            _trail.SetPosition(0, transform.position);
+            if (Followers[0].GetComponent<LineRenderer>().positionCount !=0)
+            {
+                _trail.SetPosition(1, Followers[0].transform.position);
+            }
         }
-        for (int i = 0; i<Followers.Count;i++)
+        FollowCount = Followers.Count + 1;
+        if (FollowCount > 0)
         {
-            _trail.SetPosition(i, Followers[i].GetComponent<FollowPlayer>().collisionsSphere.transform.position);
+            for (int i = 1; i < FollowCount; i++)
+            {
+                _trail.SetPosition(i, Followers[i - 1].GetComponent<FollowPlayer>().collisionsSphere.transform.position);
+            }
         }
+        
     }
 
     // Update is called once per frame
@@ -87,11 +95,15 @@ public class PlayerScript : MonoBehaviour
         if (ground && rb.velocity.y <=0)
         {
             PlayerState = action.normal;
-            _canJump = true;
+           
         }
         ObeyGravity();
-        Jump(JumpForce);
-
+        
+        //Jump
+        if (Input.GetButtonDown("Jump"))
+        {
+            wishjump = true;
+        }
     }
 
     #region Movement
@@ -102,14 +114,22 @@ public class PlayerScript : MonoBehaviour
 
         moveHorizontalRaw = Input.GetAxisRaw("Horizontal");
         moveVerticalRaw = Input.GetAxisRaw("Vertical");
-
-        if (moveHorizontalRaw != 0 || moveVerticalRaw != 0)
+        if (moveHorizontalRaw != 0 )
         {
+            SavedRight = moveHorizontal;
+        }
+        if ( moveVerticalRaw != 0)
+        {
+            SavedUp = moveVertical;
+        }
+
+        if ((moveHorizontalRaw != 0 || moveVerticalRaw != 0))
+        {
+
             rightMovement = right * moveSpeed * Time.fixedDeltaTime * moveHorizontal;
             upMovement = forward * moveSpeed * Time.fixedDeltaTime * moveVertical;
 
-            SavedRight = moveHorizontal;
-            SavedUp = moveVertical;
+
 
             if (moveSpeed >= walkSpeed)
             {
@@ -169,16 +189,12 @@ public class PlayerScript : MonoBehaviour
 
     void Jump(float force)
     {
-        //Jump
-        if (Input.GetButtonDown("Jump"))
-        {
-            wishjump = true;
-        }
+
         if (wishjump == true && ground && _canJump == true )
         {
             wishjump = false;
             ground = false;
-            rb.AddForce(0,force,0, ForceMode.VelocityChange);
+            rb.AddForce(0,force,0, ForceMode.Impulse);
             _canJump = false;
             PlayerState = action.jump;
         }
@@ -257,12 +273,13 @@ public class PlayerScript : MonoBehaviour
                 acceptable place to be grounded.*/
             if (Vector3.Angle(cP.normal, -Physics.gravity.normalized) > maxGroundedAngle  && ground)
             {
+                _canJump = true;
                 return true;
             }
             if (maxGroundedAngle > Vector3.Angle(cP.normal, -Physics.gravity.normalized) )
             {
                 groundNormal = cP.normal;
-                               
+                _canJump = true;
                 return true;
             }
         }
@@ -291,12 +308,16 @@ public class PlayerScript : MonoBehaviour
         if (other.gameObject.tag == "Chirp")
         {
             FollowPlayer followplayer = other.GetComponent<FollowPlayer>();
-            if(followplayer.Saved == false)
-            { 
+                        if(followplayer.Saved == false && followplayer.Following == false)
+            {  
                 if (followplayer.Known == false)
                 {
                     followplayer.Known = true;
                     GamecontrollerObj.Multiplier += 1;
+                    if (GamecontrollerObj.Multiplier > GamecontrollerObj.MultiplierMax)
+                    {
+                        GamecontrollerObj.Multiplier = GamecontrollerObj.MultiplierMax;
+                    }
                     GamecontrollerObj.MultiplierTimer = 0;
                     GamecontrollerObj.IncrementScore(200);
                     GamecontrollerObj.UI.UpdateMultiplier(GamecontrollerObj.Multiplier);
@@ -305,15 +326,27 @@ public class PlayerScript : MonoBehaviour
                 {
                     if (!Followers.Contains(other.gameObject)) Followers.Insert(0, other.gameObject);
 
+                    //if (Followers.Count == 1)
+                    //{
+                    //    Followers[0].GetComponent<FollowPlayer>().Leader = gameObject;
+                    //}
+                    //else
+                    //{
+                    //    Followers[0].GetComponent<FollowPlayer>().Leader = Followers[1].gameObject;
+                    //    Followers[1].GetComponent<FollowPlayer>().Follower = Followers[0].gameObject;
+                    //}
+
                     if (Followers.Count == 1)
                     {
                         Followers[0].GetComponent<FollowPlayer>().Leader = gameObject;
                     }
                     else
                     {
-                        Followers[0].GetComponent<FollowPlayer>().Leader = Followers[1].gameObject;
-                        Followers[1].GetComponent<FollowPlayer>().Follower = Followers[0].gameObject;
+                        Followers[0].GetComponent<FollowPlayer>().Leader = gameObject;
+                        Followers[0].GetComponent<FollowPlayer>().Follower = Followers[1].gameObject;
+                        Followers[1].GetComponent<FollowPlayer>().Leader = Followers[0].gameObject;
                     }
+
 
                     //Fuckery that is setting the hitboxes and collisions.
                     followplayer.Following = true;
@@ -331,12 +364,12 @@ public class PlayerScript : MonoBehaviour
                     other.gameObject.GetComponent<Rigidbody>().isKinematic = false;
                     other.gameObject.GetComponent<Rigidbody>().useGravity = false;
 
-                    _trail.positionCount = Followers.Count + 1;
+                    _trail.positionCount = Followers.Count+1;
 
                     if (Followers.Count == 1)
                     {
                         _trail.SetPosition(0, transform.position);
-                        _trail.SetPosition(1, Followers[Followers.Count - 1].GetComponent<FollowPlayer>().collisionsSphere.transform.position);
+                        _trail.SetPosition(1, Followers[0].GetComponent<FollowPlayer>().collisionsSphere.transform.position);
                     }
 
                     _trail.SetPosition(Followers.Count, Followers[Followers.Count - 1].GetComponent<FollowPlayer>().collisionsSphere.transform.position);
@@ -350,13 +383,14 @@ public class PlayerScript : MonoBehaviour
             Goodbye.AddRange(Followers);
 
             Followers.Clear();
-            Trail.positionCount = Followers.Count + 1;
+            Trail.positionCount = Followers.Count;
 
             //other.GetComponent<LineRenderer>();
             foreach (GameObject a in Goodbye)
             {
                 a.GetComponent<FollowPlayer>().Leader = other.GetComponent<GoalDoor>().SpiritLeader;
                 a.GetComponent<FollowPlayer>().WalkSpeed = .05f;
+                a.GetComponent<FollowPlayer>().Saved = true;
             }
         }
 
@@ -364,6 +398,11 @@ public class PlayerScript : MonoBehaviour
         {
             Destroy(other.gameObject);
             GamecontrollerObj.Multiplier += 1;
+            if (GamecontrollerObj.Multiplier >GamecontrollerObj.MultiplierMax)
+            {
+                GamecontrollerObj.Multiplier = GamecontrollerObj.MultiplierMax;
+            }
+            
             GamecontrollerObj.MultiplierTimer = 0;
             GamecontrollerObj.IncrementScore(10);
             GamecontrollerObj.UI.UpdateMultiplier(GamecontrollerObj.Multiplier); 

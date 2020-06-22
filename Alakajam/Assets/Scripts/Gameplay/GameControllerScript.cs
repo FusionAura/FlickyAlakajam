@@ -4,9 +4,9 @@ using UnityEngine;
 
 public class GameControllerScript : MonoBehaviour
 {
-    public int Score, Lives, Multiplier;
+    public int Score,  Multiplier, MultiplierMax = 5;
 
-    public float MultiplierTimerMax = 5, MultiplierTimer = 0;
+    public float MultiplierTimerMax = 5, MultiplierTimer = 0,Timer = 30;
 
     public UIScript UI;
 
@@ -14,8 +14,16 @@ public class GameControllerScript : MonoBehaviour
     void Awake()
     {
         PlayerPrefs.SetInt("Score", Score);
-        PlayerPrefs.SetInt("Lives", Lives);
         UI.UpdateMultiplier(Multiplier);
+    }
+
+    private void FixedUpdate()
+    {
+        if (Timer > 0)
+        {
+            Timer -= 1 * Time.fixedDeltaTime;
+            UI.UpdateTime(Timer);
+        }
     }
 
     // Update is called once per frame
@@ -41,12 +49,4 @@ public class GameControllerScript : MonoBehaviour
         PlayerPrefs.SetInt("Score", PlayerPrefs.GetInt("Score") + (Val* Multiplier));
         UI.UpdateScore();
     }
-
-    public void SetLives()
-    {
-        PlayerPrefs.SetInt("Lives", PlayerPrefs.GetInt("Lives") -1);
-        UI.UpdateLives();
-    }
-
-
 }
